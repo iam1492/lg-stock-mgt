@@ -1,0 +1,28 @@
+{
+  "name": "lg-stock-mgt",
+  "version": "1.0.0",
+  "description": "**Readme**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iam1492/lg-stock-mgt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/iam1492/lg-stock-mgt/issues"
+  },
+  "homepage": "https://github.com/iam1492/lg-stock-mgt#readme",
+  "dependencies": {
+    "@copilotkit/react-core": "^1.7.0",
+    "@copilotkit/react-ui": "^1.7.0"
+  },
+  "overrides": {
+    "@trpc/client": "^10.45.2"
+  }
+}
