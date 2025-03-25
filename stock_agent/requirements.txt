@@ -1,0 +1,16 @@
+python-dotenv
+langgraph
+langchain
+langchain_openai
+langchain_anthropic
+langchain_google_genai
+langchain-core
+pydantic
+streamlit
+typing
+yfinance
+finnhub-python
+fredapi
+langchain-tavily
+cachetools
+langgraph-cli
