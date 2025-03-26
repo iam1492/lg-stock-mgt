@@ -30,7 +30,7 @@ def get_financial_statement(ticker: str):
     
     return financial_statement
 
-@cached(cache=TTLCache(maxsize=1024, ttl=600))
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))
 def fetch_financial_data(ticker: str, days: int, timeframe: str, limit: int):
     today = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -98,7 +98,7 @@ def financial_statements_finnhub(ticker: str):
     
     return financial_data
 
-@cached(cache=TTLCache(maxsize=1024, ttl=600))
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))
 def _retrieve_financial_statements_finnhub(ticker, finnhub_client, start_date, end_date):
     basic_financials = finnhub_client.company_basic_financials(ticker, 'all')
     
@@ -125,3 +125,60 @@ def _retrieve_financial_statements_finnhub(ticker, finnhub_client, start_date, e
     }
     
     return financial_data
+
+@tool(description="Stock Price - last 1 Month")
+def stock_price_1m(ticker: str):
+    """Useful to get stock price data for the last month.
+    
+    Input paramter:
+    - ticker: The ticker of a company.
+    """
+    ticker = yf.Ticker(ticker)
+    return ticker.history(period="1mo")
+
+@tool(description="Stock Price - last 1 Year")
+def stock_price_1y(ticker: str):
+    """
+    Useful to get stock price data for the last year.
+    
+    Input paramters:
+    - ticker: The ticker of a company.
+    """
+    ticker = yf.Ticker(ticker)
+    return ticker.history(period="1y")
+
+@cached(cache=TTLCache(maxsize=1024, ttl=600))
+def fetch_technical_indicator(ticker: str, timespan: str, window_size: int, limit: int, type: str):
+    api_key = os.environ["POLYGON_API_KEY"]
+    url = f"https://api.polygon.io/v1/indicators/{type}/{ticker}?timespan={timespan}&adjusted=true&window={window_size}&series_type=close&order=desc&limit={limit}&apiKey={api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": f"Failed to fetch data: {response.status_code}"}
+
+@tool(description="Simple Moving Average")
+def simple_moving_average(ticker: str, timespan: str, window_size: int, limit: int):
+    """
+    Get historical simple moving average data for a stock ticker.
+    The input parameter of this tool is as follows:
+    - ticker(type:str): The ticker of a company..
+    - timespan(type:str): The size of the aggregate time window.(for example day, week, month, quarter, year)
+    - window_size(type:int): The window size used to calculate the simple moving average (SMA). i.e. a window size of 30 with daily aggregates would result in a 30 day moving average.
+    - limit(type:int): Limit the number of results returned.(maximum 5000)
+    The output of this tool offer the simple moving average json object which contains list of simple moving average.
+    """
+    return fetch_technical_indicator(ticker, timespan, window_size, limit, "sma")
+
+@tool(description="Relative Strength Index")
+def relative_strength_index(ticker: str, timespan: str, window_size: int, limit: int):
+    """
+    Get historical relative strength index data for a stock ticker.
+    The input parameter of this tool is as follows:
+    - ticker(type:str): ticker of a company..
+    - timespan(type:str): The size of the aggregate time window.(for example day, week, month, quarter, year)
+    - window_size(type:int): The window size used to calculate the relative strength index (RSI). i.e. a window size of 30 with daily aggregates would result in a 30 day RSI.
+    - limit(type:int): Limit the number of results returned.(maximum 5000)
+    The output of this tool offer the relative strength index json object which contains list of relative strength index.
+    """
+    return fetch_technical_indicator(ticker, timespan, window_size, limit, "rsi")
