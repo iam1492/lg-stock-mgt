@@ -3,7 +3,7 @@ from typing import TypedDict, Literal, Union
 from langgraph.graph import StateGraph, START
 from langgraph.graph.message import add_messages
 from typing import Annotated, Any
-from langchain_core.messages import AnyMessage, RemoveMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AnyMessage, RemoveMessage, HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 
@@ -12,19 +12,19 @@ load_dotenv()
 class SubState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
-def create_agent(llm, tools, system_prompt, last_message_count_to_transmission = 1, name=None):
+def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_transmission = 1, name=None):
     tool_node = ToolNode(tools)
-    if tools:
-        _llm = llm.bind_tools(tools)    
-    else:
-        _llm = llm
-        
+    _llm = llm.bind_tools(tools)    
+    
     def create_agent_node(state, llm , system_prompt):
         human_messages = [msg for msg in state["messages"] if isinstance(msg, HumanMessage)]
+        ai_messages = [msg for msg in state["messages"] if isinstance(msg, AIMessage)]
         other_messages = [msg for msg in state["messages"] 
-                        if not isinstance(msg, HumanMessage) and not isinstance(msg, SystemMessage)]
+                        if not isinstance(msg, HumanMessage) and not isinstance(msg, SystemMessage)
+                        and not isinstance(msg, AIMessage)]
+        
         system_messages = [SystemMessage(content=system_prompt)]
-        messages = system_messages + human_messages + other_messages
+        messages = system_messages + human_messages + ai_messages + other_messages
         message = llm.invoke(messages)
         
         return {

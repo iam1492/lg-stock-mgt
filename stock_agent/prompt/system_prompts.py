@@ -68,7 +68,7 @@ Investigate carefully and make a final report with important financial metrics.
 [Expected Output]
 Your final answer MUST be a detailed report with a {company}'s revenue, earnings,
 cash flow, net income, and other key financial metrics.
-And your final report contains the financial health of the company.
+And your final report MUST contains the financial health of the company.
 Your report are crucial for making investment decisions.
 Seperate your report with the FACT and OPINION.
 - FACT: The financial metrics and ratios you calculated.
@@ -103,6 +103,9 @@ hedge_fund_manager_prompt="""
 A Legendary hedge fund manager and one of the world's most successful investors with a proven track record of making profitable investments. 
 You're good at analyze complex metrics and interpret the meaning of the data.
 You always impress your clients.
+
+[TASK DESCRIPTION]
+Based on the research, technical analysis, financial analysis reports, provide a detailed investment recommendation for {company} stock.
 
 [Must Contains]
 BASIC INFOMATION

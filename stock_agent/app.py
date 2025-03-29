@@ -15,10 +15,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
-_openai = ChatOpenAI (
-    model= "gpt-4o-mini"
-)
-
 class State(MessagesState):
     company: str
 
@@ -51,7 +47,7 @@ save_mermaid_as_png(graph)
 
 def main_loop():
     print(f"Starting...")
-    company = "Tesla"
+    company = "Palantir"
     user_input = f"Do a research and Analyze {company} stock."
     initial_message = {
             "messages": [HumanMessage(content=user_input)],

@@ -14,9 +14,13 @@ class NodeStyles:
     )
     
 def save_mermaid_as_png(graph: CompiledStateGraph):
-    graph.get_graph(xray=True).draw_mermaid_png(
-        background_color="white",
-        node_colors=NodeStyles(),
-        output_file_path="./stock_agent/graph/graph.png")
+    try:
+        graph.get_graph(xray=True).draw_mermaid_png(
+            background_color="white",
+            node_colors=NodeStyles(),
+            output_file_path="./stock_agent/graph/graph.png")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        
     
         
