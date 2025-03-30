@@ -115,7 +115,7 @@ def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_tran
     
     if has_tool:
         subgraph_builder.add_node("tools", tool_node)
-        subgraph_builder.add_node("delete_messages", delete_messages_node)
+    subgraph_builder.add_node("delete_messages", delete_messages_node)
     subgraph_builder.add_edge(START, "agent")
     if has_tool:
         subgraph_builder.add_conditional_edges("agent", my_tools_condition)
