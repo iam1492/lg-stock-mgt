@@ -5,6 +5,7 @@ from tools.custom_tools import (
 )
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_deepseek import ChatDeepSeek
 from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
 from utils.agent_util import create_agent_with_tool
@@ -24,14 +25,14 @@ tavily_search_tool = TavilySearch(
     topic="finance"
 )
 
-llm = ChatGoogleGenerativeAI(
-    #model="gemini-2.5-pro-exp-03-25",
-    model="gemini-2.0-flash",
-    timeout=None,
-    max_retries=2
-)
-#llm = ChatOpenRouter(model_name="deepseek/deepseek-chat-v3-0324:free")
-#llm = ChatOpenAI(model="gpt-4o")
+# llm = ChatGoogleGenerativeAI(
+#     #model="gemini-2.5-pro-exp-03-25",
+#     model="gemini-2.0-flash",
+#     timeout=None,
+#     max_retries=2
+# )
+llm = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
+# llm = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
 
 researcher = lambda state: create_agent_with_tool(
     llm=llm, 

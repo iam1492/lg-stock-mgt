@@ -61,9 +61,8 @@ The final report MUST use Markdown format for optimal readability.
 """
 stock_financial_advisor_prompt="""
 [Task Description]
-Use the former reports to make a detailed final report.
-Compare the financial reports and make a final report.
-Investigate carefully and make a final report with important financial metrics.
+Use the input data to make a detailed final report.
+Using financial reports, make a final report.
 
 [Expected Output]
 Your final answer MUST be a detailed report with a {company}'s revenue, earnings,

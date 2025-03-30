@@ -116,7 +116,7 @@ def get_annual_financial_statements(ticker: str):
 def get_quarterly_financial_statements(ticker: str):
     """Get quarterly financial statements for a company."""
     finnhub_client = finnhub.Client(api_key=os.environ["FINNHUB_API_KEY"])
-    start_date = (datetime.now() - timedelta(days=1095)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
     end_date = datetime.now().strftime("%Y-%m-%d")
     return _get_quarterly_financial_statements(ticker, finnhub_client, start_date, end_date)
 
