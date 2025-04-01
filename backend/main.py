@@ -2,6 +2,7 @@ import asyncio
 import json
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
 import sys
@@ -21,6 +22,21 @@ except ImportError as e:
     graph = None # Or raise RuntimeError("Could not import graph") from e
 
 app = FastAPI()
+
+# Add CORS middleware
+origins = [
+    "http://localhost:3000", # Allow frontend origin
+    # Add any other origins if needed
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allow all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"], # Allow all headers
+)
+
 
 class StreamRequest(BaseModel):
     company: str
@@ -82,7 +98,9 @@ async def event_generator(company: str, user_input: str):
         yield f"data: {json.dumps({'error': 'Error during stream execution', 'details': str(e)})}\n\n"
 
 
-@app.post("/stream")
+# Note: The endpoint path in the frontend fetch request is /stream_endpoint
+# Ensure this matches the path defined here. Let's change it to match the frontend.
+@app.post("/stream_endpoint")
 async def stream_endpoint(request_data: StreamRequest):
     """
     API endpoint to stream LangGraph execution results.
