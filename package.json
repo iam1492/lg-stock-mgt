@@ -20,6 +20,8 @@
   "homepage": "https://github.com/iam1492/lg-stock-mgt#readme",
   "dependencies": {
     "@copilotkit/react-core": "^1.8.4",
-    "@copilotkit/react-ui": "^1.8.4"
+    "@copilotkit/react-ui": "^1.8.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   }
 }
