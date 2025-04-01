@@ -3,10 +3,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import MessagesState
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
-from graph.display_graph import save_mermaid_as_png
-from agents import (researcher, 
-                    financial_analyst, 
-                    financial_analyst_2, 
+from .graph.display_graph import save_mermaid_as_png # Use relative import
+from .agents import (researcher, # Use relative import
+                    financial_analyst,
+                    financial_analyst_2,
                     financial_advisor, 
                     technical_analyst,
                     hedge_fund_manager
@@ -43,7 +43,7 @@ builder.add_edge("hedge_fund_manager", END)
 
 graph = builder.compile()
 
-save_mermaid_as_png(graph)
+# save_mermaid_as_png(graph) # Temporarily commented out to prevent potential silent crash during import
 
 def main_loop():
     print(f"Starting...")

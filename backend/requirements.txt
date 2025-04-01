@@ -1,0 +1,4 @@
+fastapi
+uvicorn[standard]
+# Add other specific backend dependencies here if needed in the future.
+# Core LangChain dependencies are assumed to be installed via stock_agent/requirements.txt

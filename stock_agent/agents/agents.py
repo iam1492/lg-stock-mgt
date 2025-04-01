@@ -4,7 +4,7 @@ from uuid import UUID
 from langchain_core.agents import AgentAction, AgentFinish
 from langgraph.prebuilt import create_react_agent
 from langchain_core.outputs import LLMResult
-from tools.custom_tools import (
+from ..tools.custom_tools import ( # Use relative import
     stock_news, financial_statements_from_polygon, financial_statements_finnhub,
     stock_price_1m, stock_price_1y, simple_moving_average, relative_strength_index,
     get_basic_financials, get_annual_financial_statements, get_quarterly_financial_statements
@@ -14,14 +14,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_deepseek import ChatDeepSeek
 from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
-from utils.agent_util import create_agent_with_tool
-from utils.openrouter import ChatOpenRouter
+from ..utils.agent_util import create_agent_with_tool # Use relative import
+from ..utils.openrouter import ChatOpenRouter # Use relative import
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.callbacks import StdOutCallbackHandler
-from prompt.system_prompts import (
-    stock_researcher_prompt, 
+from ..prompt.system_prompts import ( # Use relative import
+    stock_researcher_prompt,
     stock_fianacial_analyst_1_prompt,
-    stock_financial_analyst_2_prompt, 
+    stock_financial_analyst_2_prompt,
     stock_financial_advisor_prompt,
     technical_analyst_prompt, 
     hedge_fund_manager_prompt,
