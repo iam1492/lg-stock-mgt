@@ -47,7 +47,7 @@ save_mermaid_as_png(graph)
 
 def main_loop():
     print(f"Starting...")
-    company = "Palantir"
+    company = "Advanced Micro Devices"
     user_input = f"Do a research and Analyze {company} stock."
     initial_message = {
             "messages": [HumanMessage(content=user_input)],

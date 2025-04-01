@@ -1,3 +1,9 @@
+from typing import Any
+from uuid import UUID
+
+from langchain_core.agents import AgentAction, AgentFinish
+from langgraph.prebuilt import create_react_agent
+from langchain_core.outputs import LLMResult
 from tools.custom_tools import (
     stock_news, financial_statements_from_polygon, financial_statements_finnhub,
     stock_price_1m, stock_price_1y, simple_moving_average, relative_strength_index,
@@ -10,7 +16,8 @@ from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
 from utils.agent_util import create_agent_with_tool
 from utils.openrouter import ChatOpenRouter
-from langgraph.prebuilt import create_react_agent
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain.callbacks import StdOutCallbackHandler
 from prompt.system_prompts import (
     stock_researcher_prompt, 
     stock_fianacial_analyst_1_prompt,
@@ -25,13 +32,51 @@ tavily_search_tool = TavilySearch(
     topic="finance"
 )
 
+class CallbackHandler(BaseCallbackHandler):
+    def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], *, run_id: UUID, parent_run_id: UUID | None = None, tags: list[str] | None = None, metadata: dict[str, Any] | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print("[Callback] on_llm_start:", str(serialized)[:50])
+    
+    def on_llm_end(self, response: LLMResult, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print("[Callback] on_llm_end:", str(response.llm_output)[:50])
+        
+    def on_chat_model_start(self, serialized, messages, **kwargs):
+        print("----------------------------------")
+        print("[Callback] Chat model start:", str(messages)[:50])
+        
+    def on_chat_model_end(self, response, **kwargs):
+        print("----------------------------------")
+        print("[Callback] Chat model end:", str(response)[:50])
+        
+    
+    def on_tool_start(self, serialized: dict[str, Any], input_str: str, *, run_id: UUID, parent_run_id: UUID | None = None, tags: list[str] | None = None, metadata: dict[str, Any] | None = None, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print("[Callback] on_tool_start:", str(serialized)[:10])
+        
+    
+    def on_tool_end(self, output: Any, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print("[Callback] on_tool_end:", str(output)[:10])
+        
+    
+    def on_agent_action(self, action: AgentAction, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print(f"[Callback] on_agent_action: tool: {str(action.tool)[:10]} input: {str(action.tool_input)[:10]}")
+        
+        
+    def on_agent_finish(self, finish: AgentFinish, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        print("----------------------------------")
+        print("[Callback] on_agent_finish:", str(finish.return_values)[:10])
+        
 # llm = ChatGoogleGenerativeAI(
-#     #model="gemini-2.5-pro-exp-03-25",
-#     model="gemini-2.0-flash",
+#     model="gemini-2.5-pro-exp-03-25",
 #     timeout=None,
-#     max_retries=2
+#     max_retries=2,
+#     callbacks=[CallbackHandler()]
 # )
-llm = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
+llm = ChatDeepSeek(model="deepseek-chat", max_tokens=8192,callbacks=[CallbackHandler()])
+
 # llm = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
 
 researcher = lambda state: create_agent_with_tool(
@@ -94,4 +139,3 @@ hedge_fund_manager = lambda state: create_agent_with_tool(
     last_message_count_to_transmission=1,
     name="Hedge Fund Manager"
 )
-

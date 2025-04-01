@@ -30,16 +30,8 @@ def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_tran
         
         system_messages = [SystemMessage(content=system_prompt)]
         messages = system_messages + human_messages + ai_messages + other_messages
-        
-        for i, msg in enumerate(messages):
-            msg_type = type(msg).__name__
-            content = getattr(msg, 'content', None)
-            has_tool_calls = hasattr(msg, 'tool_calls')
-            print(f"[{i}] {msg_type} Input({name}): {'비어있음' if not content and not has_tool_calls else '내용 있음'}")
             
         message = illm.invoke(messages)
-        if isinstance(message, AIMessage) and not message.content:
-            print(f"message is empty({name})")
         
         return {
             "messages": [message]
@@ -81,12 +73,6 @@ def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_tran
         
         # 삭제할 메시지 결정
         to_remove = [msg for msg in messages if msg not in keep_messages]
-        
-        for i, msg in enumerate(keep_messages):
-            msg_type = type(msg).__name__
-            content = getattr(msg, 'content', None)
-            has_tool_calls = hasattr(msg, 'tool_calls')
-            print(f"[{i}] {msg_type} Keep_messages({name}): {'비어있음' if not content and not has_tool_calls else '내용 있음'} has_tool_calls: {has_tool_calls}")
         
         if to_remove:
             return {"messages": [RemoveMessage(id=msg.id) for msg in to_remove]}
