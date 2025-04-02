@@ -75,7 +75,7 @@ class CallbackHandler(BaseCallbackHandler):
 #     max_retries=2,
 #     callbacks=[CallbackHandler()]
 # )
-llm = ChatDeepSeek(model="deepseek-chat", max_tokens=8192,callbacks=[CallbackHandler()])
+llm = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)#,callbacks=[CallbackHandler()])
 
 # llm = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
 

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from typing import TypedDict, Literal, Union
-from langgraph.graph import StateGraph, START
+from langgraph.graph import StateGraph, START, END # Ensure END is imported
 from langgraph.graph.message import add_messages
 from typing import Annotated, Any
 from langchain_core.messages import AnyMessage, RemoveMessage, HumanMessage, SystemMessage, AIMessage
@@ -15,97 +15,89 @@ class SubState(TypedDict):
 def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_transmission = 1, name=None):
     has_tool = len(tools) > 0
     tool_node = ToolNode(tools)
-    
+
     if has_tool:
-        _llm = llm.bind_tools(tools)    
+        _llm = llm.bind_tools(tools)
     else:
         _llm = llm
-    
-    def create_agent_node(state, illm , system_prompt):
-        human_messages = [msg for msg in state["messages"] if isinstance(msg, HumanMessage)]
-        ai_messages = [msg for msg in state["messages"] if isinstance(msg, AIMessage)]
-        other_messages = [msg for msg in state["messages"] 
-                        if not isinstance(msg, HumanMessage) and not isinstance(msg, SystemMessage)
-                        and not isinstance(msg, AIMessage)]
-        
-        system_messages = [SystemMessage(content=system_prompt)]
-        messages = system_messages + human_messages + ai_messages + other_messages
-            
-        message = illm.invoke(messages)
-        
-        return {
-            "messages": [message]
-        }
-        
-    agent_node = lambda state: create_agent_node(state, _llm, system_prompt=system_prompt)
-    
-    def delete_messages(state, last_message_count):
+
+    # Agent node function
+    def agent_node_func(state: SubState):
+        messages = state['messages']
+        # Inject system prompt before invoking - ensure it doesn't duplicate if already present
+        # A simple approach: filter out previous system messages and add the current one
+        filtered_messages = [msg for msg in messages if not isinstance(msg, SystemMessage)]
+        current_system_message = SystemMessage(content=system_prompt)
+        final_messages = [current_system_message] + filtered_messages
+
+        response = _llm.invoke(final_messages)
+        return {"messages": [response]}
+
+    # Message pruning node function
+    def delete_messages_func(state: SubState):
         messages = state["messages"]
-        
-        # 빈 메시지 필터링
-        valid_messages = [msg for msg in messages if hasattr(msg, 'content') and msg.content or hasattr(msg, 'tool_calls')]
-        
-        if not valid_messages:
-            # 유효한 메시지가 없으면 기본 메시지 생성
-            if "company" in state:
-                return {"messages": [HumanMessage(content=f"Analyze {state['company']} stock.")]}
+        # Keep the first HumanMessage (initial query) and the last AIMessage (agent's response)
+        # This is a basic strategy, might need refinement based on graph logic
+        if not messages:
             return {"messages": []}
-        
-        # 도구 호출 결과 및 중요 메시지 보존
-        human_messages = [msg for msg in valid_messages if isinstance(msg, HumanMessage)]
-        ai_messages = [msg for msg in valid_messages if isinstance(msg, AIMessage)]
-        tool_messages = [msg for msg in valid_messages if hasattr(msg, 'tool_call_id')]
-        
-        # 보존할 메시지 결정
+
+        # Find first human message and last AI message
+        first_human = next((msg for msg in messages if isinstance(msg, HumanMessage)), None)
+        last_ai = next((msg for msg in reversed(messages) if isinstance(msg, AIMessage)), None)
+
         keep_messages = []
-        
-        # 항상 최소 하나의 인간 메시지 유지
-        if human_messages:
-            keep_messages.append(human_messages[0])
-            
-        
-        # 마지막 AI 메시지 유지 (내용이 있는 경우만)
-        if ai_messages:
-            for msg in reversed(ai_messages):
-                if msg.content or hasattr(msg, 'tool_calls'):
-                    keep_messages.append(msg)
-                    break
-        
-        # 삭제할 메시지 결정
-        to_remove = [msg for msg in messages if msg not in keep_messages]
-        
-        if to_remove:
-            return {"messages": [RemoveMessage(id=msg.id) for msg in to_remove]}
-        return {"messages": []}
-    
-    def my_tools_condition(
-        state: Union[list[AnyMessage], dict[str, Any], BaseModel],
-        messages_key: str = "messages",
-    ) -> Literal["tools", "delete_messages"]:
-        if isinstance(state, list):
-            ai_message = state[-1]
-        elif isinstance(state, dict) and (messages := state.get(messages_key, [])):
-            ai_message = messages[-1]
-        elif messages := getattr(state, messages_key, []):
-            ai_message = messages[-1]
+        if first_human:
+            keep_messages.append(first_human)
+        if last_ai:
+            # Avoid adding the same message twice if it's the only one
+            if not first_human or first_human.id != last_ai.id:
+                 keep_messages.append(last_ai)
+
+        # Identify messages to remove (those not in keep_messages)
+        # Use IDs for reliable removal
+        keep_ids = {msg.id for msg in keep_messages}
+        to_remove_ids = [msg.id for msg in messages if msg.id not in keep_ids]
+
+        if to_remove_ids:
+            # Return RemoveMessage objects for LangGraph to handle deletion
+            return {"messages": [RemoveMessage(id=msg_id) for msg_id in to_remove_ids]}
         else:
-            raise ValueError(f"No messages found in input state to tool_edge: {state}")
-        if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
+            # If no messages need removal, return empty list to signify no change needed here
+            return {"messages": []}
+
+
+    # Conditional edge function
+    def should_continue(state: SubState) -> Literal["tools", "delete_messages"]:
+        messages = state['messages']
+        if not messages:
+            return "delete_messages" # Or END? Let's route to delete for cleanup.
+        last_message = messages[-1]
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
             return "tools"
-        return "delete_messages"
-    
-    delete_messages_node = lambda state: delete_messages(state, last_message_count = last_message_count_to_transmission)
-    
+        return "delete_messages" # Route to message deletion if no tools called
+
+    # Build the subgraph
     subgraph_builder = StateGraph(SubState)
-    subgraph_builder.add_node("agent", agent_node)
-    
+    subgraph_builder.add_node("agent", agent_node_func)
+    subgraph_builder.add_node("delete_messages", delete_messages_func) # Add the node back
+
     if has_tool:
         subgraph_builder.add_node("tools", tool_node)
-    subgraph_builder.add_node("delete_messages", delete_messages_node)
-    subgraph_builder.add_edge(START, "agent")
-    if has_tool:
-        subgraph_builder.add_conditional_edges("agent", my_tools_condition)
-        subgraph_builder.add_edge("tools", "agent")
-    subgraph = subgraph_builder.compile(name=name)
-    
+        subgraph_builder.add_edge(START, "agent")
+        subgraph_builder.add_conditional_edges(
+            "agent",
+            should_continue,
+            {"tools": "tools", "delete_messages": "delete_messages"} # Route to tools or delete
+        )
+        subgraph_builder.add_edge("tools", "agent") # Loop back after tools
+        subgraph_builder.add_edge("delete_messages", END) # End after deleting messages
+    else:
+        # If no tools, agent -> delete_messages -> END
+        subgraph_builder.add_edge(START, "agent")
+        subgraph_builder.add_edge("agent", "delete_messages")
+        subgraph_builder.add_edge("delete_messages", END)
+
+    # Compile the subgraph
+    subgraph = subgraph_builder.compile()
+    subgraph.name = name
     return subgraph
