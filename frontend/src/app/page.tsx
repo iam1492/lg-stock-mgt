@@ -226,7 +226,7 @@ export default function Home() {
     <div className="flex justify-center items-center min-h-screen bg-muted/40">
         <div className="flex flex-col h-screen w-full max-w-4xl bg-background text-foreground border-x">
             <header className="p-4 border-b text-center">
-                <h1 className="text-xl font-semibold">종목분석</h1>
+                <h1 className="text-xl font-semibold">라무스씨와 함께하는 주식종목탐구생활</h1>
             </header>
 
             {/* Chat Area */}
