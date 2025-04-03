@@ -56,13 +56,8 @@ export default function Home() {
       sender: 'user',
       text: initialUserPrompt,
     };
-    const loadingMessage: Message = {
-        id: Date.now() + 1, // Ensure unique ID
-        sender: 'loading',
-        text: '...' // Placeholder text, won't be shown
-    };
-    // Reset messages and add user prompt + loading indicator
-    setMessages([newUserMessage, loadingMessage]);
+    // Reset messages and add only the user prompt initially
+    setMessages([newUserMessage]);
 
     setRequestNonce(prev => prev + 1); // Trigger the useEffect
   };
@@ -76,7 +71,8 @@ export default function Home() {
     abortControllerRef.current = controller;
 
     const performFetch = async () => {
-        let loadingMessageRemoved = false; // Flag to ensure loading message is removed only once
+        // Add initial loading message here
+        setMessages(prev => [...prev, { id: Date.now(), sender: 'loading', text: '...' }]);
         try {
             const response = await fetch(`http://localhost:8080/stream_endpoint`, {
                 method: "POST",
@@ -119,15 +115,17 @@ export default function Home() {
                                 try {
                                     const data: StreamData = JSON.parse(jsonString);
 
-                                    // Remove loading message on first valid data received
-                                    if (!loadingMessageRemoved) {
-                                        setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
-                                        loadingMessageRemoved = true;
-                                    }
-
                                     if (data.error) {
                                         console.error("Stream error:", data.error);
-                                        setMessages((prev) => [...prev, { id: Date.now(), sender: 'error', text: `Stream Error: ${data.error}` }]);
+                                        // Remove previous loading message before adding error
+                                        setMessages(prev => {
+                                            let newMessages = [...prev];
+                                            if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'loading') {
+                                                newMessages.pop();
+                                            }
+                                            newMessages.push({ id: Date.now(), sender: 'error', text: `Stream Error: ${data.error}` });
+                                            return newMessages;
+                                        });
                                     } else if (data.content) {
                                         const contentString = data.content;
                                         const separatorIndex = contentString.indexOf(': ');
@@ -138,76 +136,91 @@ export default function Home() {
                                             agentName = contentString.substring(0, separatorIndex);
                                             messageText = contentString.substring(separatorIndex + 2);
                                         }
-                                        setMessages((prev) => [...prev, { id: Date.now(), sender: agentName, text: messageText }]);
+
+                                        setMessages(prev => {
+                                            let newMessages = [...prev];
+                                            // Remove the last message if it was 'loading'.
+                                            if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'loading') {
+                                                newMessages.pop();
+                                            }
+                                            // Add the current agent's message.
+                                            newMessages.push({ id: Date.now(), sender: agentName, text: messageText });
+                                            // Add placeholder loading for the *next* potential agent.
+                                            newMessages.push({ id: Date.now() + 1, sender: 'loading', text: '...' });
+                                            return newMessages;
+                                        });
                                     }
                                 } catch (parseError) {
                                     console.warn('Failed to parse JSON chunk:', jsonString, parseError);
-                                    // Remove loading message even if parse fails but data received
-                                     if (!loadingMessageRemoved) {
-                                        setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
-                                        loadingMessageRemoved = true;
-                                    }
-                                    setMessages((prev) => [...prev, { id: Date.now(), sender: 'system', text: `Received raw data: ${jsonString}` }]);
+                                     // Remove previous loading message before adding system message
+                                     setMessages(prev => {
+                                        let newMessages = [...prev];
+                                        if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'loading') {
+                                            newMessages.pop();
+                                        }
+                                        newMessages.push({ id: Date.now(), sender: 'system', text: `Received raw data: ${jsonString}` });
+                                        return newMessages;
+                                    });
                                 }
                             }
                         }
                     }
                 }
             }
-            if (buffer.trim().startsWith('data: ')) {
-                const jsonString = buffer.substring(6).trim();
-                 // Remove loading message if stream ends with partial data
-                 if (!loadingMessageRemoved) {
-                    setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
-                    loadingMessageRemoved = true;
-                }
-                // ... (parsing logic if needed) ...
-            }
+             // Handle any remaining buffer data if necessary (optional)
+             // if (buffer.trim().startsWith('data: ')) { ... }
 
         } catch (error: any) {
+             // Remove any loading message on error
+             setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
             if (error.name === 'AbortError') {
                 console.log('Fetch aborted by user or new request.');
+                // Optionally add a system message indicating abortion
+                // setMessages((prev) => [...prev, { id: Date.now(), sender: 'system', text: 'Analysis stopped.' }]);
             } else {
                 console.error('Error fetching or processing stream:', error);
-                 // Remove loading message on error
-                setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
                 setMessages((prev) => [...prev, { id: Date.now(), sender: 'error', text: `Error: ${error.message}` }]);
             }
         } finally {
-             // Ensure loading message is removed if stream finishes/errors before any data arrived
-            if (!loadingMessageRemoved) {
-                 setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
-            }
+             // Ensure any trailing 'loading' message added after the last agent is removed.
+             setMessages(prev => prev.filter(msg => msg.sender !== 'loading'));
             setIsFetching(false); // Mark fetching as complete
             if (abortControllerRef.current === controller) {
-                 abortControllerRef.current = null;
+                 abortControllerRef.current = null; // Clear the ref if it's the current controller
             }
         }
     };
 
     performFetch();
 
+    // Effect cleanup function
     return () => {
         console.log("Effect cleanup: Aborting fetch if still active.");
-        controller.abort();
-        if (abortControllerRef.current === controller) {
-             abortControllerRef.current = null;
-        }
+        controller.abort(); // Abort the fetch associated with this effect instance
+        // Don't nullify abortControllerRef here, as a new request might have already started
+        // and set its own controller in the ref. The finally block handles nullifying the ref
+        // if the fetch completes or errors naturally.
     };
-  }, [requestNonce, company]);
+  }, [requestNonce]); // Dependency array: only re-run when requestNonce changes
 
+  // Scroll to bottom effect
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Component unmount cleanup
   useEffect(() => {
     return () => {
+      // Ensure any ongoing fetch is aborted when the component unmounts
       if (abortControllerRef.current) {
+          console.log("Component unmount: Aborting fetch.");
           abortControllerRef.current.abort();
+          abortControllerRef.current = null;
       }
     };
-  }, []);
+  }, []); // Empty dependency array means this runs only on mount and unmount
 
+  // Removed duplicate stopStreaming function
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-muted/40">
