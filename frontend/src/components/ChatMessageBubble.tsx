@@ -39,41 +39,43 @@ export function ChatMessageBubble({ sender, text }: ChatMessageBubbleProps) {
         sender === 'user' ? "justify-end" : "justify-start"
       )}
     >
-      <div
-        className={cn(
-          "max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl p-3 rounded-lg shadow",
-          sender === 'user' ? "bg-primary text-primary-foreground"
-          : sender === 'loading' ? "bg-muted p-2" // Style for loading bubble
-          : sender === 'error' || sender === 'system' ? "bg-destructive text-destructive-foreground"
-          : "bg-muted", // Default agent style
-          showExpandable ? "cursor-pointer hover:shadow-md transition-shadow" : "" // Add cursor pointer for expandable messages
-        )}
-        onClick={handleToggleExpand}
-      >
-        {/* Render Lottie animation for loading message */}
-        {sender === 'loading' ? (
-           <div className="w-16 h-8 flex items-center justify-center"> {/* Adjust size and center */}
-             {typeof window !== 'undefined' && <Lottie animationData={chatLoadingAnimation} loop={true} />}
-           </div>
-        ) : sender !== 'user' ? (
-          <>
-            {/* Show sender name only for agent/error/system messages */}
-            {(sender !== 'error' && sender !== 'system') && (
-                <p className="text-xs font-semibold mb-1 capitalize">{sender}</p>
-            )}
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {displayText}
-              </ReactMarkdown>
-            </div>
-            {showExpandable && !isExpanded && (
-              <div className="text-right text-xs text-muted-foreground mt-1">Click to expand</div>
-            )}
-          </>
-        ) : (
-          <p className="whitespace-pre-wrap">{text}</p> // User message
-        )}
-      </div>
+      {/* Conditionally render the container div or just the animation */}
+      {sender === 'loading' ? (
+        <div className="w-16 h-8 flex items-center justify-center"> {/* Container for animation size */}
+          {typeof window !== 'undefined' && <Lottie animationData={chatLoadingAnimation} loop={true} />}
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl p-3 rounded-lg shadow", // Keep original styles for non-loading
+            sender === 'user' ? "bg-primary text-primary-foreground"
+            : sender === 'error' || sender === 'system' ? "bg-destructive text-destructive-foreground"
+            : "bg-muted", // Default agent style
+            showExpandable ? "cursor-pointer hover:shadow-md transition-shadow" : ""
+          )}
+          onClick={handleToggleExpand}
+        >
+          {/* Content for non-loading messages */}
+          {sender !== 'user' ? (
+            <>
+              {/* Show sender name only for agent/error/system messages */}
+              {(sender !== 'error' && sender !== 'system') && (
+                  <p className="text-xs font-semibold mb-1 capitalize">{sender}</p>
+              )}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {displayText}
+                </ReactMarkdown>
+              </div>
+              {showExpandable && !isExpanded && (
+                <div className="text-right text-xs text-muted-foreground mt-1">Click to expand</div>
+              )}
+            </>
+          ) : (
+            <p className="whitespace-pre-wrap">{text}</p> // User message
+          )}
+        </div>
+      )}
     </div>
   );
 }
