@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChatMessageBubble } from "@/components/ChatMessageBubble"; // Import the new component
 import { cn } from "@/lib/utils";
 
 // Define the structure for chat messages
@@ -21,30 +22,7 @@ interface StreamData {
   error?: string;
 }
 
-// Simple SVG Spinner Component
-const LoadingSpinner = () => (
-    <svg
-        className="animate-spin h-5 w-5 text-primary" // Use primary color for spinner within the bubble
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-    >
-        <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-        ></circle>
-        <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-    </svg>
-);
-
+// LoadingSpinner is now inside ChatMessageBubble.tsx
 
 export default function Home() {
   const [company, setCompany] = useState<string>('');
@@ -241,41 +219,7 @@ export default function Home() {
             {/* Chat Area */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
                 {messages.map((msg) => (
-                <div
-                    key={msg.id}
-                    className={cn(
-                    "flex",
-                    msg.sender === 'user' ? "justify-end" : "justify-start"
-                    )}
-                >
-                    <div
-                    className={cn(
-                        "max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl p-3 rounded-lg shadow",
-                        msg.sender === 'user' ? "bg-primary text-primary-foreground"
-                        : msg.sender === 'loading' ? "bg-muted p-2" // Style for loading bubble
-                        : msg.sender === 'error' || msg.sender === 'system' ? "bg-destructive text-destructive-foreground"
-                        : "bg-muted" // Default agent style
-                    )}
-                    >
-                    {/* Render Spinner for loading message */}
-                    {msg.sender === 'loading' ? (
-                        <LoadingSpinner />
-                    ) : msg.sender !== 'user' ? (
-                         <>
-                            {msg.sender !== 'error' && msg.sender !== 'system' && (
-                                <p className="text-xs font-semibold mb-1 capitalize">{msg.sender}</p>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {msg.text}
-                                </ReactMarkdown>
-                            </div>
-                         </>
-                    ) : (
-                        <p className="whitespace-pre-wrap">{msg.text}</p> // User message
-                    )}
-                    </div>
-                </div>
+                    <ChatMessageBubble key={msg.id} sender={msg.sender} text={msg.text} />
                 ))}
                 <div ref={messagesEndRef} />
             </div>
