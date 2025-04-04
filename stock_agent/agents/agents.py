@@ -17,10 +17,10 @@ from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
 from ..utils.agent_util import create_agent_with_tool # Use relative import
 from ..utils.openrouter import ChatOpenRouter # Use relative import
-# Remove local handler imports if no longer needed directly here
+# Remove local handler imports
 # from langchain.callbacks.base import BaseCallbackHandler
 # from langchain.callbacks import StdOutCallbackHandler
-from ..utils.callback_util import get_callback_handler # Import getter from new location
+# Removed import of get_callback_handler as it's no longer used here
 from ..prompt.system_prompts import ( # Use relative import
     stock_researcher_prompt,
     stock_fianacial_analyst_1_prompt,
@@ -48,23 +48,17 @@ tavily_search_tool = TavilySearch(
 _llm_instance = None # Keep LLM instance holder
 
 def get_llm():
-    """Gets or creates the LLM instance using the handler from callback_util."""
+    """Gets or creates the LLM instance. Callbacks are added during graph execution."""
     global _llm_instance
-    # Restore original logic:
     if _llm_instance is None:
-        handler = get_callback_handler() # Use imported getter
-        # llm = ChatGoogleGenerativeAI(
-        #     model="gemini-2.5-pro-exp-03-25",
-        #     timeout=None,
-        #     max_retries=2,
-        #     callbacks=[handler] # Pass the instance
-        # )
-        _llm_instance = ChatDeepSeek(model="deepseek-chat", max_tokens=8192, callbacks=[handler]) # Pass the instance
-        # _llm_instance = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384, callbacks=[handler]) # Pass the instance
-        print("DEBUG: Initialized LLM (in agents.py using handler from callback_util)") # Corrected print statement location
+        # Initialize LLM WITHOUT callbacks here.
+        # Callbacks will be provided via config in graph.stream/astream.
+        # llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest", timeout=None, max_retries=2)
+        _llm_instance = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
+        # _llm_instance = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
+        print("DEBUG: Initialized LLM (in agents.py - no callbacks here)")
     return _llm_instance
 # --- End Refactored Initialization ---
-# --- Removed misplaced callback method definitions ---
 
 
 researcher = lambda state: create_agent_with_tool( # Keep original indentation

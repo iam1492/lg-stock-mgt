@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChatMessageBubble } from "@/components/ChatMessageBubble"; // Import the new component
+import ToolUsageDisplay from '@/components/ToolUsageDisplay'; // Import the Tool Usage display
 import { cn } from "@/lib/utils";
 
 // Define the structure for chat messages
@@ -223,9 +224,11 @@ export default function Home() {
   // Removed duplicate stopStreaming function
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-muted/40">
-        <div className="flex flex-col h-screen w-full max-w-4xl bg-background text-foreground border-x">
-            <header className="p-4 border-b text-center">
+    // Restore the centered layout with gray background
+    <div className="flex justify-center items-start min-h-screen bg-muted/40 p-4 gap-4"> {/* Added padding and gap */}
+        {/* Main Chat Container (Centered) */}
+        <div className="flex flex-col h-[calc(100vh-2rem)] w-full max-w-3xl bg-background text-foreground border rounded-lg shadow-md overflow-hidden"> {/* Adjusted max-width, added rounded corners and shadow */}
+            <header className="p-4 border-b text-center flex-shrink-0">
                 <h1 className="text-xl font-semibold">라무스씨와 함께하는 주식종목탐구생활</h1>
             </header>
 
@@ -238,26 +241,24 @@ export default function Home() {
             </div>
 
             {/* Input Area Container */}
-            {/* Removed vertical padding and internal padding */}
-            <div className="sticky bottom-0 px-6 py-6 bg-background border-t">
-                <Card className="shadow-md">
-                    <CardContent className="p-4"> {/* Removed internal padding */}
+            <div className="sticky bottom-0 px-4 py-4 bg-background border-t flex-shrink-0"> {/* Adjusted padding */}
+                <Card className="shadow-none border-0"> {/* Removed shadow/border from inner card */}
+                    <CardContent className="p-2"> {/* Adjusted padding */}
                         <form onSubmit={handleSubmit} className="flex flex-row gap-2 items-center">
                             <Input
                                 type="text"
                                 value={company}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompany(e.target.value)}
                                 placeholder="Company Name (e.g., Apple)"
-                                className="flex-grow border-0 outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-8 px-2" // Kept height at h-4
+                                className="flex-grow border rounded h-9 px-3" // Simplified input style
                                 required
-                                disabled={isFetching} // Disable input while fetching
+                                disabled={isFetching}
                             />
-                            {/* Override button size with direct height class */}
-                            <Button type="submit" disabled={!company || isFetching} className="h-8">
+                            <Button type="submit" disabled={!company || isFetching} className="h-9"> {/* Matched height */}
                                 {isFetching ? "..." : "Send"}
                             </Button>
-                            {isFetching && ( // Show stop button only when fetching
-                                <Button type="button" variant="destructive" onClick={stopStreaming} className="h-8">
+                            {isFetching && (
+                                <Button type="button" variant="destructive" onClick={stopStreaming} className="h-9"> {/* Matched height */}
                                     Stop
                                 </Button>
                             )}
@@ -265,6 +266,12 @@ export default function Home() {
                     </CardContent>
                 </Card>
             </div>
+        </div>
+
+        {/* Tool Usage Column (to the right) */}
+        {/* Added fixed width, height matching chat, margin for background visibility */}
+        <div className="w-80 h-[calc(100vh-2rem)] flex-shrink-0">
+            <ToolUsageDisplay />
         </div>
     </div>
   );
