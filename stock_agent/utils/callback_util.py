@@ -24,13 +24,14 @@ class WebSocketCallbackHandler(BaseCallbackHandler):
             self._loop = asyncio.get_event_loop()
         print(f"DEBUG: Initialized WebSocketCallbackHandler with loop: {self._loop}")
 
-    async def _broadcast_tool_event(self, event_type: str, content: str):
-        """Helper method to format and broadcast tool events."""
+    async def _broadcast_tool_event(self, event_type: str, content: str, run_id: UUID):
+        """Helper method to format and broadcast tool events, including run_id."""
         timestamp = datetime.now().isoformat()
         message = {
             "type": event_type,
             "content": content,
-            "timestamp": timestamp
+            "timestamp": timestamp,
+            "run_id": str(run_id) # Add run_id as a string
         }
         if self.websocket_manager:
             # Run the broadcast in the event loop managed by FastAPI/Uvicorn
@@ -75,9 +76,9 @@ class WebSocketCallbackHandler(BaseCallbackHandler):
         description = f"Tool Start: Running tool '{tool_name}' with input: {input_str[:100]}{'...' if len(input_str) > 100 else ''}"
         print(f"[WebSocketCallback] {description}")
         # Schedule the async broadcast method onto the stored event loop
-        # using a thread-safe approach.
+        # using a thread-safe approach, passing the run_id.
         asyncio.run_coroutine_threadsafe(
-            self._broadcast_tool_event("start", description),
+            self._broadcast_tool_event("start", description, run_id),
             self._loop
         )
 
@@ -99,7 +100,7 @@ class WebSocketCallbackHandler(BaseCallbackHandler):
         description = f"Tool End: Output: {output_str[:200]}{'...' if len(output_str) > 200 else ''}"
         print(f"[WebSocketCallback] {description}")
         asyncio.run_coroutine_threadsafe(
-            self._broadcast_tool_event("end", description),
+            self._broadcast_tool_event("end", description, run_id),
             self._loop
         )
 

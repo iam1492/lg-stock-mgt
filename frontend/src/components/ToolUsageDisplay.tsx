@@ -11,6 +11,8 @@ interface ToolUsage {
   type: 'start' | 'end';
   content: string;
   timestamp: string;
+  run_id: string; // Add run_id
+  associatedStartTitle?: string | null; // Add for end messages
 }
 
 interface ToolUsageItemProps {
@@ -19,32 +21,32 @@ interface ToolUsageItemProps {
 
 const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const originalContentRef = React.useRef<HTMLParagraphElement>(null); // Ref for original content height check
+  const originalContentRef = React.useRef<HTMLParagraphElement>(null);
   const [isOriginalContentTruncated, setIsOriginalContentTruncated] = useState(false);
 
   let displayTitle: string | null = null;
-  let toolName: string | null = null;
-  let ticker: string | null = null;
+  let isMapped = false; // Flag to know if we created a custom title
 
-  // Process only 'start' messages for mapping
   if (usage.type === 'start') {
-    // Extract tool name using regex
+    // Logic to extract toolName, ticker, and get mapped title
     const toolNameMatch = usage.content.match(/Running tool '([^']+)'/);
-    toolName = toolNameMatch ? toolNameMatch[1] : null;
-
-    // Extract ticker using regex (simple case)
+    const toolName = toolNameMatch ? toolNameMatch[1] : null;
     const tickerMatch = usage.content.match(/'ticker':\s*'([^']+)'/);
-    // Use extracted ticker or a default placeholder if not found
-    ticker = tickerMatch ? tickerMatch[1] : 'STOCK';
+    const ticker = tickerMatch ? tickerMatch[1] : 'STOCK'; // Default ticker
 
-    if (toolName && ticker) {
+    if (toolName) {
       const mapper = new ToolNameMapper(ticker);
-      // Get mapped name or create a fallback
       displayTitle = mapper.getMapping(toolName) || `Running ${toolName}...`;
-    } else if (toolName) {
-        // Fallback if ticker extraction failed but tool name exists
-        displayTitle = `Running ${toolName}...`;
+      isMapped = true;
     }
+    // If toolName couldn't be extracted, displayTitle remains null, show original content
+  } else if (usage.type === 'end') {
+    // Use the associated title if available (passed down from parent based on run_id)
+    if (usage.associatedStartTitle) {
+      displayTitle = `${usage.associatedStartTitle} [완료]`;
+      isMapped = true;
+    }
+    // If no associated title, displayTitle remains null, show original content
   }
 
   // Check if the *original* content needs truncation for the "Show more" button
@@ -60,12 +62,22 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
     return () => clearTimeout(timer); // Cleanup timer
   }, [usage.content, isExpanded]); // Rerun when content changes or expansion state changes
 
+  // Check if the *original* content needs truncation for the "Show more" button
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (originalContentRef.current) {
+            // Check if the original content is taller than one line height (approx 24px)
+            setIsOriginalContentTruncated(originalContentRef.current.scrollHeight > 24);
+        }
+    }, 0);
+    return () => clearTimeout(timer); // Cleanup timer
+  }, [usage.content, isExpanded]); // Rerun when content changes or expansion state changes
+
   return (
     <div className="mb-2 text-sm">
-      {displayTitle ? (
-        // Mapped display for 'start' messages
+      {isMapped ? (
+        // Display mapped title (start or completed end)
         <>
-          {/* Display the mapped title */}
           <p className="whitespace-pre-wrap break-words font-medium">
             {displayTitle}
           </p>
@@ -76,15 +88,8 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
           >
-            {isExpanded ? (
-              <>
-                Show less <ChevronUp className="ml-1 h-3 w-3" />
-              </>
-            ) : (
-              <>
-                Show more <ChevronDown className="ml-1 h-3 w-3" />
-              </>
-            )}
+            {isExpanded ? 'Show less' : 'Show more'}
+            {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
           </Button>
           {/* Original content shown when expanded */}
           {isExpanded && (
@@ -94,17 +99,16 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
           )}
         </>
       ) : (
-        // Original display logic for 'end' messages or if mapping failed
+        // Original display logic (unmappable start/end, or regular end without association)
         <>
           <p
-            ref={originalContentRef} // Use ref here too
+            ref={originalContentRef}
             className={`whitespace-pre-wrap break-words ${
               !isExpanded && isOriginalContentTruncated ? 'line-clamp-1' : ''
             }`}
           >
             {usage.content}
           </p>
-          {/* Show button only if content is actually truncated */}
           {isOriginalContentTruncated && (
             <Button
               variant="ghost"
@@ -112,15 +116,8 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
               onClick={() => setIsExpanded(!isExpanded)}
               className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
             >
-              {isExpanded ? (
-                <>
-                  Show less <ChevronUp className="ml-1 h-3 w-3" />
-                </>
-              ) : (
-                <>
-                  Show more <ChevronDown className="ml-1 h-3 w-3" />
-                </>
-              )}
+             {isExpanded ? 'Show less' : 'Show more'}
+             {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
             </Button>
           )}
         </>
@@ -132,10 +129,11 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
 
 const ToolUsageDisplay: React.FC = () => {
   const [toolUsages, setToolUsages] = useState<ToolUsage[]>([]);
-  const usageIdCounter = useRef(0); // Ref to ensure unique IDs for keys
+  const usageIdCounter = useRef(0);
+  // Use useRef for synchronous access to the map within the WebSocket handler
+  const startTitlesMapRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
-    // Ensure WebSocket runs only on the client side
     if (typeof window === 'undefined') {
       return;
     }
@@ -160,18 +158,53 @@ const ToolUsageDisplay: React.FC = () => {
       ws.onmessage = (event) => {
         try {
           const messageData = JSON.parse(event.data);
-          // Validate the received data structure
-          if (messageData && typeof messageData === 'object' && messageData.type && messageData.content && messageData.timestamp) {
-            const newUsage: ToolUsage = {
-              id: usageIdCounter.current++, // Use counter for unique ID
-              type: messageData.type === 'start' ? 'start' : 'end',
-              content: messageData.content,
-              // Format timestamp for better readability
-              timestamp: new Date(messageData.timestamp).toLocaleTimeString(),
-            };
+          // Validate the received data structure, now including run_id
+          if (messageData && typeof messageData === 'object' && messageData.type && messageData.content && messageData.timestamp && messageData.run_id) {
+            const type = messageData.type === 'start' ? 'start' : 'end';
+            const content = messageData.content;
+            const timestamp = new Date(messageData.timestamp).toLocaleTimeString();
+            const run_id = messageData.run_id;
+            const id = usageIdCounter.current++;
+
+            let newUsage: ToolUsage;
+            let associatedStartTitle: string | null = null;
+
+            if (type === 'start') {
+              // Extract toolName and ticker to generate mapped title
+              const toolNameMatch = content.match(/Running tool '([^']+)'/);
+              const toolName = toolNameMatch ? toolNameMatch[1] : null;
+              const tickerMatch = content.match(/'ticker':\s*'([^']+)'/);
+              const ticker = tickerMatch ? tickerMatch[1] : 'STOCK';
+
+              if (toolName) {
+                const mapper = new ToolNameMapper(ticker);
+                const mappedTitle = mapper.getMapping(toolName) || `Running ${toolName}...`;
+                // Store the title directly in the ref's current map
+                startTitlesMapRef.current.set(run_id, mappedTitle);
+              } else {
+                 // Store a fallback title if name extraction fails
+                 startTitlesMapRef.current.set(run_id, `Running unknown tool...`);
+              }
+              newUsage = { id, type, content, timestamp, run_id }; // No associated title needed for start
+            } else { // type === 'end'
+              // Look up the associated start title directly from the ref's current map
+              associatedStartTitle = startTitlesMapRef.current.get(run_id) || null;
+              newUsage = {
+                id,
+                type,
+                content,
+                timestamp,
+                run_id,
+                associatedStartTitle // Pass the found title (or null)
+              };
+              // Optional: Clean up the map entry in the ref if desired
+              // startTitlesMapRef.current.delete(run_id);
+            }
+
             setToolUsages((prevUsages) => [...prevUsages, newUsage]);
+
           } else {
-            console.warn('Received invalid WebSocket message format:', messageData);
+            console.warn('Received invalid WebSocket message format (missing fields?):', messageData);
           }
         } catch (error) {
           console.error('Failed to parse WebSocket message or update state:', error);
