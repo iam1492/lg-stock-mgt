@@ -67,6 +67,10 @@ class WebSocketCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         """Send tool start event via WebSocket."""
         print("----------------------------------")
+        print("run_id:", run_id)
+        print("parent_run_id:", parent_run_id)
+        print("tags:", tags)
+    
         tool_name = serialized.get('name', 'Unknown Tool')
         description = f"Tool Start: Running tool '{tool_name}' with input: {input_str[:100]}{'...' if len(input_str) > 100 else ''}"
         print(f"[WebSocketCallback] {description}")
@@ -88,6 +92,9 @@ class WebSocketCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         """Send tool end event via WebSocket."""
         print("----------------------------------")
+        print("run_id:", run_id)
+        print("parent_run_id:", parent_run_id)
+        print("tags:", tags)
         output_str = str(output)
         description = f"Tool End: Output: {output_str[:200]}{'...' if len(output_str) > 200 else ''}"
         print(f"[WebSocketCallback] {description}")

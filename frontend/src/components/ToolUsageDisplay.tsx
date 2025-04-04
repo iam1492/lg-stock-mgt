@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ToolNameMapper } from '../app/toolname_map'; // Import ToolNameMapper
 
 interface ToolUsage {
   id: number;
@@ -18,48 +19,112 @@ interface ToolUsageItemProps {
 
 const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const contentRef = React.useRef<HTMLParagraphElement>(null);
+  const originalContentRef = React.useRef<HTMLParagraphElement>(null); // Ref for original content height check
+  const [isOriginalContentTruncated, setIsOriginalContentTruncated] = useState(false);
 
-  // Remove the prefix, as it's included in the content from backend now
-  const displayContent = usage.content;
+  let displayTitle: string | null = null;
+  let toolName: string | null = null;
+  let ticker: string | null = null;
 
-  useEffect(() => {
-    if (contentRef.current) {
-      // Check if the content is taller than one line height (approx 24px for typical line-height)
-      setIsTruncated(contentRef.current.scrollHeight > 24);
+  // Process only 'start' messages for mapping
+  if (usage.type === 'start') {
+    // Extract tool name using regex
+    const toolNameMatch = usage.content.match(/Running tool '([^']+)'/);
+    toolName = toolNameMatch ? toolNameMatch[1] : null;
+
+    // Extract ticker using regex (simple case)
+    const tickerMatch = usage.content.match(/'ticker':\s*'([^']+)'/);
+    // Use extracted ticker or a default placeholder if not found
+    ticker = tickerMatch ? tickerMatch[1] : 'STOCK';
+
+    if (toolName && ticker) {
+      const mapper = new ToolNameMapper(ticker);
+      // Get mapped name or create a fallback
+      displayTitle = mapper.getMapping(toolName) || `Running ${toolName}...`;
+    } else if (toolName) {
+        // Fallback if ticker extraction failed but tool name exists
+        displayTitle = `Running ${toolName}...`;
     }
-  }, [displayContent]);
+  }
+
+  // Check if the *original* content needs truncation for the "Show more" button
+  // This check is relevant for both mapped ('start') and unmapped ('end') messages
+  useEffect(() => {
+    // We need a slight delay for the ref to be populated correctly, especially when conditionally rendered
+    const timer = setTimeout(() => {
+        if (originalContentRef.current) {
+            // Check if the original content is taller than one line height (approx 24px)
+            setIsOriginalContentTruncated(originalContentRef.current.scrollHeight > 24);
+        }
+    }, 0);
+    return () => clearTimeout(timer); // Cleanup timer
+  }, [usage.content, isExpanded]); // Rerun when content changes or expansion state changes
 
   return (
     <div className="mb-2 text-sm">
-      <p
-        ref={contentRef}
-        className={`whitespace-pre-wrap break-words ${
-          !isExpanded && isTruncated ? 'line-clamp-1' : ''
-        }`}
-      >
-        {displayContent}
-      </p>
-      {isTruncated && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
-        >
-          {isExpanded ? (
-            <>
-              Show less <ChevronUp className="ml-1 h-3 w-3" />
-            </>
-          ) : (
-            <>
-              Show more <ChevronDown className="ml-1 h-3 w-3" />
-            </>
+      {displayTitle ? (
+        // Mapped display for 'start' messages
+        <>
+          {/* Display the mapped title */}
+          <p className="whitespace-pre-wrap break-words font-medium">
+            {displayTitle}
+          </p>
+          {/* Button to toggle original content */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
+          >
+            {isExpanded ? (
+              <>
+                Show less <ChevronUp className="ml-1 h-3 w-3" />
+              </>
+            ) : (
+              <>
+                Show more <ChevronDown className="ml-1 h-3 w-3" />
+              </>
+            )}
+          </Button>
+          {/* Original content shown when expanded */}
+          {isExpanded && (
+             <p ref={originalContentRef} className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
+               {usage.content}
+             </p>
           )}
-        </Button>
+        </>
+      ) : (
+        // Original display logic for 'end' messages or if mapping failed
+        <>
+          <p
+            ref={originalContentRef} // Use ref here too
+            className={`whitespace-pre-wrap break-words ${
+              !isExpanded && isOriginalContentTruncated ? 'line-clamp-1' : ''
+            }`}
+          >
+            {usage.content}
+          </p>
+          {/* Show button only if content is actually truncated */}
+          {isOriginalContentTruncated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
+            >
+              {isExpanded ? (
+                <>
+                  Show less <ChevronUp className="ml-1 h-3 w-3" />
+                </>
+              ) : (
+                <>
+                  Show more <ChevronDown className="ml-1 h-3 w-3" />
+                </>
+              )}
+            </Button>
+          )}
+        </>
       )}
-      {/* Removed timestamp paragraph */}
     </div>
   );
 };
