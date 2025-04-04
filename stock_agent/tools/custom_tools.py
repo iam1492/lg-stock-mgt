@@ -256,12 +256,9 @@ def validate_timespan(timespan: str) -> str:
     if timespan not in valid_timespans:
         if timespan.lower() in timespan_mapping:
             new_timespan = timespan_mapping[timespan.lower()]
-            print(f"Timespan 값이 자동으로 '{new_timespan}'으로 변환되었습니다.")
         else:
-            print(f"경고: 유효하지 않은 timespan 값 '{timespan}'입니다. 'day', 'week', 'month', 'quarter', 'year' 중 하나를 사용해야 합니다.")
             # 기본값으로 설정하거나 오류 처리
             new_timespan = "month"
-            print(f"기본값 '{timespan}'으로 진행합니다.")
     return new_timespan
 
 @tool(description="Expectations Investing")

@@ -15,11 +15,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 try:
     # Import the graph from the stock_agent application
     from stock_agent.app import graph
+    # Import the getter function for the handler from the util file
+    from stock_agent.utils.callback_util import get_callback_handler
 except ImportError as e:
-    print(f"Error importing graph from stock_agent.app: {e}")
-    # Provide a dummy graph or raise an error if the import fails
-    # This helps in identifying path issues early
-    graph = None # Or raise RuntimeError("Could not import graph") from e
+    print(f"Error importing graph or get_callback_handler: {e}") # Adjusted error message
+    graph = None
+    get_callback_handler = None # Set getter to None if import fails
 
 app = FastAPI()
 
@@ -50,6 +51,22 @@ async def event_generator(company: str, user_input: str):
         yield f"data: {json.dumps({'error': 'Graph not loaded'})}\n\n"
         return
 
+    # Prepare config for astream, getting the handler via the getter
+    config = {}
+    if get_callback_handler:
+        try:
+            handler = get_callback_handler() # Call the getter function
+            if handler:
+                config = {"callbacks": [handler]}
+                print("DEBUG: Using callback handler obtained via getter for graph.astream.")
+            else:
+                 print("WARN: get_callback_handler() returned None.")
+        except Exception as e:
+            print(f"ERROR: Failed to get callback handler: {e}")
+            print("WARN: Proceeding without graph execution callbacks.")
+    else:
+        print("WARN: get_callback_handler function not imported, proceeding without graph execution callbacks.")
+
     # Construct the initial message for the graph stream
     input_message = user_input if user_input else f"Do a research and Analyze {company} stock."
     initial_state = {
@@ -63,10 +80,9 @@ async def event_generator(company: str, user_input: str):
     print(f"DEBUG: Entering event_generator for company: {company}")
 
     try:
-        print("DEBUG: About to start graph.astream loop with stream_mode='updates'...")
-        # Stream the graph execution using "updates" mode
-        async for event in graph.astream(initial_state, stream_mode="updates"):
-            print(f"DEBUG: Received update event: {event}") # Log the raw update event
+        print("DEBUG: About to start graph.astream loop with stream_mode='updates' and config...")
+        # Pass the potentially populated config to astream
+        async for event in graph.astream(initial_state, config=config, stream_mode="updates"):
             try:
                 # Events in "updates" mode are dicts like: {"node_name": {"messages": [AIMessage]}}
                 if isinstance(event, dict):
@@ -89,9 +105,8 @@ async def event_generator(company: str, user_input: str):
                                         # Prepend the node name (agent name)
                                         formatted_content = f"{node_name}: {content_to_send}"
                                         json_data = json.dumps({"content": formatted_content})
-                                        print(f"DEBUG: Yielding content from node '{node_name}'")
+                    
                                         yield f"data: {json_data}\n\n"
-                                        print(f"DEBUG: Finished yielding content from node '{node_name}'")
 
             except Exception as e: # Corrected indentation
                 # Handle serialization or processing errors for this specific event

@@ -6,13 +6,23 @@ from typing import Annotated, Any
 from langchain_core.messages import AnyMessage, RemoveMessage, HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
+import os # Import os
 
-load_dotenv()
+# Explicitly load .env from project root
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+print(f"DEBUG [agent_util.py]: Loading .env from: {dotenv_path}")
+load_dotenv(dotenv_path=dotenv_path)
 
 class SubState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
-def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_transmission = 1, name=None):
+def create_agent_with_tool(
+    llm,
+    tools,
+    system_prompt,
+    last_message_count_to_transmission = 1,
+    name=None # Remove callbacks parameter
+):
     has_tool = len(tools) > 0
     tool_node = ToolNode(tools)
 
@@ -97,7 +107,7 @@ def create_agent_with_tool(llm, tools, system_prompt, last_message_count_to_tran
         subgraph_builder.add_edge("agent", "delete_messages")
         subgraph_builder.add_edge("delete_messages", END)
 
-    # Compile the subgraph
+    # Compile the subgraph without callbacks
     subgraph = subgraph_builder.compile()
     subgraph.name = name
     return subgraph

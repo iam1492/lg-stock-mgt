@@ -7,13 +7,17 @@ from .graph.display_graph import save_mermaid_as_png # Use relative import
 from .agents import (researcher, # Use relative import
                     financial_analyst,
                     financial_analyst_2,
-                    financial_advisor, 
+                    financial_advisor,
                     technical_analyst,
-                    hedge_fund_manager
+                    hedge_fund_manager # Remove callback_handler import
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os # Import os
 
-load_dotenv()
+# Explicitly load .env from project root
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+print(f"DEBUG [app.py]: Loading .env from: {dotenv_path}")
+load_dotenv(dotenv_path=dotenv_path)
 
 class State(MessagesState):
     company: str
@@ -53,8 +57,12 @@ def main_loop():
             "messages": [HumanMessage(content=user_input)],
             "company": company
         }
+    # Remove config with callbacks for now
+    # config = {"callbacks": [callback_handler]}
+    # Stream without the explicit config for callbacks
     for event in graph.stream(initial_message, stream_mode="values"):
-            event['messages'][-1].pretty_print()
+            if "messages" in event and event["messages"]: # Check if messages exist and are not empty
+                event['messages'][-1].pretty_print()
 
 if __name__ == "__main__":
     main_loop()
