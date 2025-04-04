@@ -73,54 +73,48 @@ const ToolUsageItem: React.FC<ToolUsageItemProps> = ({ usage }) => {
     return () => clearTimeout(timer); // Cleanup timer
   }, [usage.content, isExpanded]); // Rerun when content changes or expansion state changes
 
+  // Determine if the chevron should be shown (only if original content is expandable)
+  const showChevron = isMapped || isOriginalContentTruncated;
+
   return (
-    <div className="mb-2 text-sm">
-      {isMapped ? (
-        // Display mapped title (start or completed end)
-        <>
-          <p className="whitespace-pre-wrap break-words font-medium">
+    // Make the whole div clickable, add divider, and increase vertical padding
+    <div
+      className="text-sm border-b border-gray-200 dark:border-gray-700 py-3 cursor-pointer" // Changed py-2 to py-3
+      onClick={() => showChevron && setIsExpanded(!isExpanded)} // Only expand if chevron is shown
+    >
+      <div className="flex justify-between items-start"> {/* Use flex to align text and chevron */}
+        {isMapped ? (
+          // Display mapped title (start or completed end)
+          <p className="whitespace-pre-wrap break-words font-medium flex-grow mr-2"> {/* Allow text to grow */}
             {displayTitle}
           </p>
-          {/* Button to toggle original content */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
-          >
-            {isExpanded ? 'Show less' : 'Show more'}
-            {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
-          </Button>
-          {/* Original content shown when expanded */}
-          {isExpanded && (
-             <p ref={originalContentRef} className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
-               {usage.content}
-             </p>
-          )}
-        </>
-      ) : (
-        // Original display logic (unmappable start/end, or regular end without association)
-        <>
+        ) : (
+          // Original display logic (unmappable start/end, or regular end without association)
           <p
             ref={originalContentRef}
-            className={`whitespace-pre-wrap break-words ${
+            className={`whitespace-pre-wrap break-words flex-grow mr-2 ${ // Allow text to grow
               !isExpanded && isOriginalContentTruncated ? 'line-clamp-1' : ''
             }`}
           >
             {usage.content}
           </p>
-          {isOriginalContentTruncated && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="h-auto p-0 text-xs text-muted-foreground hover:bg-transparent"
-            >
-             {isExpanded ? 'Show less' : 'Show more'}
-             {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
-            </Button>
-          )}
-        </>
+        )}
+        {/* Chevron positioned at the end, only shown if expandable */}
+        {showChevron && (
+           <span className="flex-shrink-0 text-muted-foreground"> {/* Prevent chevron from shrinking */}
+             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+           </span>
+        )}
+      </div>
+
+      {/* Original content shown when expanded (only if it was mapped or truncated) */}
+      {isExpanded && showChevron && (
+         <p
+           ref={!isMapped ? originalContentRef : null} // Only attach ref if original content was shown initially
+           className="mt-1 whitespace-pre-wrap break-words text-muted-foreground"
+         >
+           {usage.content}
+         </p>
       )}
     </div>
   );
