@@ -53,8 +53,8 @@ def get_llm():
     if _llm_instance is None:
         # Initialize LLM WITHOUT callbacks here.
         # Callbacks will be provided via config in graph.stream/astream.
-        # llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-latest", timeout=None, max_retries=2)
-        _llm_instance = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
+        _llm_instance = ChatGoogleGenerativeAI(model="gemini-2.5-pro-preview-03-25", timeout=None, max_retries=2)
+        # _llm_instance = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
         # _llm_instance = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
         print("DEBUG: Initialized LLM (in agents.py - no callbacks here)")
     return _llm_instance
@@ -75,13 +75,6 @@ financial_analyst = lambda state: create_agent_with_tool(
     last_message_count_to_transmission=1,
     name="Financial Analyst")
 
-# financial_analyst_2 = lambda state: create_react_agent( # Keep original indentation
-#     model=llm,
-#     tools=[financial_statements_finnhub],
-#     prompt=PromptTemplate.from_template(stock_financial_analyst_2_prompt).format(company=state["company"]),
-#     name="Financial Analyst 2"
-# ) # Keep original indentation
-
 financial_analyst_2 = lambda state: create_agent_with_tool(
     llm=get_llm(), # Use getter
     tools=[get_basic_financials, get_quarterly_financial_statements, get_annual_financial_statements],
@@ -95,13 +88,6 @@ financial_advisor = lambda state: create_agent_with_tool(
     system_prompt=stock_financial_advisor_prompt.format(company=state["company"]),
     last_message_count_to_transmission=1,
     name="Financial Advisor")
-
-# financial_advisor = lambda state: create_react_agent( # Keep original indentation
-#     model=llm,
-#     tools=[],
-#     prompt=PromptTemplate.from_template(stock_financial_advisor_prompt).format(company=state["company"]),
-#     name="Financial Advisor"
-# ) # Keep original indentation
 
 technical_analyst = lambda state: create_agent_with_tool(
     llm=get_llm(), # Use getter
