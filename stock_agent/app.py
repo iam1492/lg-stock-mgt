@@ -9,7 +9,8 @@ from .agents import (researcher, # Use relative import
                     financial_analyst_2,
                     financial_advisor,
                     technical_analyst,
-                    hedge_fund_manager # Remove callback_handler import
+                    hedge_fund_manager,
+                    translator # Add translator import
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os # Import os
@@ -35,6 +36,7 @@ builder.add_node("financial_analyst_2", financial_analyst_2)
 builder.add_node("financial_advisor", financial_advisor)
 builder.add_node("technical_analyst", technical_analyst)
 builder.add_node("hedge_fund_manager", hedge_fund_manager)
+builder.add_node("translator", translator)
 
 builder.add_edge(START, "researcher")
 builder.add_edge(START, "financial_analyst")
@@ -43,7 +45,8 @@ builder.add_edge(START, "technical_analyst")
 
 builder.add_edge(["financial_analyst", "financial_analyst_2"], "financial_advisor")
 builder.add_edge(["financial_advisor","researcher", "technical_analyst"], "hedge_fund_manager")
-builder.add_edge("hedge_fund_manager", END)
+builder.add_edge("hedge_fund_manager", "translator")
+builder.add_edge("translator", END)
 
 graph = builder.compile()
 

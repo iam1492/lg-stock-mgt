@@ -28,6 +28,7 @@ from ..prompt.system_prompts import ( # Use relative import
     stock_financial_advisor_prompt,
     technical_analyst_prompt,
     hedge_fund_manager_prompt,
+    translator_prompt,
 )
 
 tavily_search_tool = TavilySearch(
@@ -103,3 +104,10 @@ hedge_fund_manager = lambda state: create_agent_with_tool(
     system_prompt=hedge_fund_manager_prompt.format(company=state["company"]),
     last_message_count_to_transmission=1,
     name="Hedge Fund Manager")
+
+translator = lambda state: create_agent_with_tool(
+    llm=get_llm(), # Use getter
+    tools=[],
+    system_prompt=translator_prompt.format(company=state["company"]),
+    last_message_count_to_transmission=1,
+    name="Translator")
