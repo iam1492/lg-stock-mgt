@@ -53,7 +53,7 @@ def get_llm():
     if _llm_instance is None:
         # Initialize LLM WITHOUT callbacks here.
         # Callbacks will be provided via config in graph.stream/astream.
-        _llm_instance = ChatGoogleGenerativeAI(model="gemini-2.5-pro-preview-03-25", timeout=None, max_retries=2)
+        _llm_instance = ChatGoogleGenerativeAI(model="gemini-2.5-pro", timeout=None, max_retries=2)
         # _llm_instance = ChatDeepSeek(model="deepseek-chat", max_tokens=8192)
         # _llm_instance = ChatOpenAI(model="gpt-4o-mini", max_completion_tokens=16384)
         print("DEBUG: Initialized LLM (in agents.py - no callbacks here)")

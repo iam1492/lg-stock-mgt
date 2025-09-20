@@ -1,6 +1,7 @@
 import asyncio
 import json
 from typing import List
+from contextlib import asynccontextmanager # Import asynccontextmanager
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,17 @@ from pydantic import BaseModel
 from langchain_core.messages import HumanMessage, AIMessage
 import sys
 import os
+from fastapi_utilities import repeat_at # Use repeat_at for cron scheduling
+
+# Add the parent directory (project root) to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Import the function to be scheduled
+try:
+    from backend.macro_job import save_macro_economics
+except ImportError as e:
+    print(f"Error importing save_macro_economics: {e}")
+    save_macro_economics = None # Set to None if import fails
 
 # Add the parent directory (project root) to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -21,7 +33,58 @@ except ImportError as e:
     graph = None
     WebSocketCallbackHandler = None # Set to None if import fails
 
-app = FastAPI()
+
+# --- Scheduled Task Function ---
+# Moved the scheduling logic into a separate async function
+@repeat_at(cron="0 0 * * *", raise_exceptions=True) # Run daily at midnight using repeat_at
+async def schedule_macro_job() -> None:
+    """
+    Schedules the save_macro_economics function to run daily at midnight.
+    """
+    if save_macro_economics:
+        print("INFO: Running scheduled task: save_macro_economics")
+        try:
+            # Assuming save_macro_economics is synchronous.
+            # If it'`s async, use 'await save_macro_economics()'
+            # Consider running synchronous blocking code in a thread pool executor
+            # if it might block the asyncio event loop for too long.
+            # For now, calling it directly.
+            # save_macro_economics()
+            print("INFO: Scheduled task save_macro_economics completed successfully.")
+        except Exception as e:
+            print(f"ERROR: Scheduled task save_macro_economics failed: {e}")
+    else:
+        print("ERROR: save_macro_economics function not loaded, skipping scheduled task.")
+
+# --- Lifespan Context Manager ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code to run on startup
+    print("INFO: Starting up FastAPI application...")
+
+    # --- Run save_macro_economics once on startup ---
+    if save_macro_economics:
+        print("INFO: Running initial save_macro_economics on startup...")
+        try:
+            # Call the synchronous function directly.
+            # Consider running in a thread pool if it's long-running to avoid blocking startup.
+            # save_macro_economics()
+            print("INFO: Initial save_macro_economics completed.")
+        except Exception as e:
+            print(f"ERROR: Initial save_macro_economics failed: {e}")
+    else:
+        print("ERROR: save_macro_economics function not loaded, skipping initial run.")
+    # -------------------------------------------------
+
+    # Start the recurring scheduled task
+    asyncio.create_task(schedule_macro_job())
+    print("INFO: Scheduled macro job task created for daily execution.")
+    yield
+    # Code to run on shutdown (optional)
+    print("INFO: Shutting down FastAPI application...")
+
+# --- FastAPI App Initialization with Lifespan ---
+app = FastAPI(lifespan=lifespan)
 
 # --- WebSocket Connection Manager ---
 class ConnectionManager:
@@ -56,6 +119,7 @@ manager = ConnectionManager()
 # --- CORS Middleware ---
 origins = [
     "http://localhost:3000", # Allow frontend origin
+    "http://127.0.0.1:3000",
     # Add any other origins if needed
 ]
 

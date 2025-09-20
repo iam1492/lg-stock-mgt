@@ -1,4 +1,7 @@
 fastapi
-uvicorn[standard]
+uvicorn
+fastapi-utilities
+python-dotenv
+google-cloud-firestore # Added for macro_job.py dependency
 # Add other specific backend dependencies here if needed in the future.
 # Core LangChain dependencies are assumed to be installed via stock_agent/requirements.txt
